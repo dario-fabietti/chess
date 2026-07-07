@@ -98,6 +98,8 @@ vendor/stockfish/     Stockfish 18 Lite single-threaded WASM build (GPLv3)
 vendor/chessjs/       chess.js 1.4.0 ESM build (BSD-2-Clause)
 assets/pieces/        cburnett piece SVGs (CC BY-SA 3.0)
 serve.py / start.sh   zero-dependency static server
+docs/                 research: ELO-aware algorithms + coaching-by-rating
+docs/coaching/        deep dive: teaching guide per 200-ELO band (400-2000)
 ```
 
 ## Architecture notes

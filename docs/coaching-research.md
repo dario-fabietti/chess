@@ -1,5 +1,11 @@
 # Chess coaching by rating — research summary
 
+> **See also:** the deeper, per-200-point-band research in
+> [coaching/](coaching/README.md) (400→2000, one file per band, covering
+> expectations, depth of thought, tactics, strategy, openings, middlegame,
+> checkmates, pawn structures, combinations and endgames). This file is the
+> earlier condensed summary.
+
 Purpose: reference material for tuning the AI coach's feedback. For each
 rating band it collects what research and established coaching curricula say
 about how such players think, how they fail, what they can absorb, and how a
