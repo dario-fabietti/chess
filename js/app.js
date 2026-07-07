@@ -34,7 +34,7 @@ class App {
     this.mode = 'analysis';      // 'analysis' | 'play'
     this.playerColor = 'w';
     this.levelIndex = 3;
-    this.show = { engineArrows: true, threats: true, coach: true };
+    this.show = { engineArrows: true, threats: true, coach: true, moveEvals: true };
     this.analysisCache = new Map(); // fen -> {depth, lines: [{scoreWhiteCp, score, stm, uci, san, pvSan}]}
     this.pendingReviews = [];       // moves awaiting classification
     this.threat = null;             // {fen, uci, san}
@@ -114,6 +114,7 @@ class App {
       ['toggle-arrows', 'engineArrows'],
       ['toggle-threats', 'threats'],
       ['toggle-coach', 'coach'],
+      ['toggle-evals', 'moveEvals'],
     ]) {
       $('#' + id).addEventListener('change', (e) => {
         this.show[key] = e.target.checked;
@@ -523,6 +524,7 @@ class App {
           from: l.uci.slice(0, 2), to: l.uci.slice(2, 4),
           color: i === 0 ? 'green' : 'blue',
           width: widths[i] ?? 1, opacity: opac[i] ?? 0.3,
+          label: this.show.moveEvals ? l.scoreText : null,
         });
       });
     }

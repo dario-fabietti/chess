@@ -101,7 +101,8 @@ export class Board {
         const el = els[y * 8 + x];
         const sq = this._xyToSquare(x, y);
         el.dataset.square = sq;
-        const light = (FILES.indexOf(sq[0]) + parseInt(sq[1], 10)) % 2 === 1;
+        // a1 is dark: light squares have even file+rank parity (a=0, rank 1-8)
+        const light = (FILES.indexOf(sq[0]) + parseInt(sq[1], 10)) % 2 === 0;
         el.classList.toggle('light', light);
         el.classList.toggle('dark', !light);
         this.squareEls[sq] = el;
@@ -223,10 +224,44 @@ export class Board {
       defs.appendChild(marker);
     }
     svg.appendChild(defs);
-    for (const shape of [...this.autoShapes, ...this.userShapes]) {
+    const shapes = [...this.autoShapes, ...this.userShapes];
+    for (const shape of shapes) {
       svg.appendChild(this._shapeEl(shape));
     }
+    // labels last, so they sit on top of every arrow
+    for (const shape of shapes) {
+      if (shape.label && shape.to) svg.appendChild(this._labelEl(shape));
+    }
     if (this._rightDrag?.preview) svg.appendChild(this._shapeEl(this._rightDrag.preview));
+  }
+
+  /** Small eval badge in the top-right corner of the shape's target square. */
+  _labelEl(shape) {
+    const { x, y } = this._sqXY(shape.to);
+    const text = String(shape.label);
+    const h = 2.5;
+    const w = text.length * 1.15 + 1.2;
+    const rx = x * 12.5 + 12.5 - w - 0.35;
+    const ry = y * 12.5 + 0.35;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', rx); rect.setAttribute('y', ry);
+    rect.setAttribute('width', w); rect.setAttribute('height', h);
+    rect.setAttribute('rx', 0.6);
+    rect.setAttribute('fill', 'rgba(20, 20, 20, 0.62)');
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', rx + w / 2);
+    t.setAttribute('y', ry + h / 2);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'central');
+    t.setAttribute('font-size', 1.8);
+    t.setAttribute('font-weight', 700);
+    t.setAttribute('font-family', 'system-ui, sans-serif');
+    t.setAttribute('fill', '#fff');
+    t.textContent = text;
+    g.appendChild(rect);
+    g.appendChild(t);
+    return g;
   }
 
   _shapeEl(shape) {

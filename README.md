@@ -33,6 +33,8 @@ just guarantees the right MIME types for the WASM engine.
 - **Colored arrows**
   - green: engine best move · blue: alternative engine lines
   - red: what the opponent threatens if you pass (null-move search)
+  - each suggested move carries a small eval badge (e.g. `+0.13`) on its
+    destination square (toggleable)
   - user arrows: right-click drag (plain = green, Shift = red, Alt = blue,
     Ctrl = yellow); right-click a square for a circle; left-click clears.
 - **AI coach (baseline)** — reviews every move against the engine
