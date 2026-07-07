@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Coach — prototype</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="assets/pieces/wn.svg">
+</head>
+<body>
+  <header>
+    <h1>♞ Chess Coach <span class="tag">prototype</span></h1>
+    <div id="engine-status" class="engine-status">starting engine…</div>
+  </header>
+
+  <main>
+    <section class="board-area">
+      <div class="eval-bar" title="Evaluation (White's perspective)">
+        <div id="eval-fill"></div>
+        <span id="eval-text">0.0</span>
+      </div>
+      <div class="board-col">
+        <div class="player-bar top">
+          <span id="name-top">Opponent</span>
+          <span id="captured-top" class="captured"></span>
+        </div>
+        <div class="board-wrap">
+          <div id="board"></div>
+          <div id="promo" class="promo"></div>
+        </div>
+        <div class="player-bar bottom">
+          <span id="name-bottom">You</span>
+          <span id="captured-bottom" class="captured"></span>
+        </div>
+        <div id="game-status" class="game-status"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel controls">
+        <div class="row">
+          <label>Mode
+            <select id="mode">
+              <option value="analysis">Analysis board</option>
+              <option value="play">Play vs engine</option>
+            </select>
+          </label>
+          <label>Play as
+            <select id="playAs">
+              <option value="w">White</option>
+              <option value="b">Black</option>
+            </select>
+          </label>
+          <label>Strength
+            <select id="level"></select>
+          </label>
+        </div>
+        <div class="row buttons">
+          <button id="btn-new">New game</button>
+          <button id="btn-flip" title="Flip board (f)">Flip</button>
+          <button id="btn-undo" title="Take back">Undo</button>
+          <button id="btn-hint" title="Ask the coach for a hint">Hint</button>
+        </div>
+        <div class="row toggles">
+          <label><input type="checkbox" id="toggle-arrows" checked> Engine arrows</label>
+          <label><input type="checkbox" id="toggle-threats" checked> Threats</label>
+          <label><input type="checkbox" id="toggle-coach" checked> Coach</label>
+          <label><input type="checkbox" id="toggle-sound" checked> Sound</label>
+        </div>
+      </section>
+
+      <section class="panel coach">
+        <h2>🎓 Coach</h2>
+        <div id="coach-messages" class="coach-messages"></div>
+      </section>
+
+      <section class="panel engine">
+        <h2>Engine <span id="engine-depth" class="depth"></span></h2>
+        <div id="lines" class="lines"></div>
+      </section>
+
+      <section class="panel moves-panel">
+        <h2>Moves</h2>
+        <div id="moves" class="moves"></div>
+        <div class="nav">
+          <button id="btn-first" title="First (↑)">⏮</button>
+          <button id="btn-prev" title="Previous (←)">◀</button>
+          <button id="btn-next" title="Next (→)">▶</button>
+          <button id="btn-last" title="Last (↓)">⏭</button>
+        </div>
+      </section>
+
+      <section class="panel io">
+        <h2>Import</h2>
+        <textarea id="load-input" rows="2" placeholder="Paste a FEN or PGN…"></textarea>
+        <div class="row buttons">
+          <button id="btn-load">Load</button>
+          <button id="btn-copy-fen">Copy FEN</button>
+          <button id="btn-copy-pgn">Copy PGN</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="flash" class="flash"></div>
+
+  <footer>
+    Arrows: green = engine best, blue = alternatives, red = opponent threat.
+    Draw your own: right-click drag (Shift = red, Alt = blue, Ctrl = yellow).
+    Engine: Stockfish 18 Lite (GPLv3) · Rules: chess.js · Pieces: cburnett (CC BY-SA 3.0)
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
