@@ -10,6 +10,7 @@ import {
   nullMoveFen, uciToSan, pvToSan, greeting,
 } from './coach.js';
 import { sounds, setSoundEnabled } from './sound.js';
+import { buildCoachPrompt, claudeAiUrl, checkBridge, explainViaBridge } from './llm.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -61,6 +62,18 @@ class App {
     Promise.all([this.analyzer.ready, this.sparring.ready]).then(() => {
       this.setEngineStatus('Stockfish 18 Lite (WASM) ready');
     });
+
+    this.claudeBridge = false;
+    this._explaining = false;
+    checkBridge().then((available) => {
+      this.claudeBridge = available;
+      const btn = $('#btn-explain');
+      btn.disabled = !available;
+      if (!available) {
+        btn.title = 'Needs the local bridge: run the app via serve.py on a machine '
+          + 'with Claude Code installed and logged in. Use "claude.ai ↗" instead.';
+      }
+    });
   }
 
   // ---- position helpers -------------------------------------------------
@@ -94,6 +107,8 @@ class App {
     $('#btn-flip').addEventListener('click', () => this.flip());
     $('#btn-undo').addEventListener('click', () => this.undo());
     $('#btn-hint').addEventListener('click', () => this.hint());
+    $('#btn-explain').addEventListener('click', () => this.explainWithClaude());
+    $('#btn-ask-claude').addEventListener('click', () => this.askOnClaudeAi());
 
     $('#btn-first').addEventListener('click', () => this.goTo(0));
     $('#btn-prev').addEventListener('click', () => this.goTo(this.viewIndex - 1));
@@ -676,10 +691,73 @@ class App {
     this.coachSay(msg, 'intro');
   }
 
+  // ---- LLM coach (Claude) ---------------------------------------------------
+
+  /** Structured ground truth for the LLM prompt (engine output + game state). */
+  collectFacts() {
+    const g = this.viewGame();
+    const fen = g.fen();
+    const snap = this.analysisCache.get(fen);
+    const history = this.game.history().slice(0, this.viewIndex);
+    const startNum = new Chess(this.startFen).moveNumber();
+    const recent = history.slice(-16);
+    const offset = history.length - recent.length;
+    const recentMoves = recent.map((san, i) => {
+      const ply = offset + i;
+      return ply % 2 === 0 ? `${startNum + ply / 2}.${san}` : san;
+    }).join(' ');
+    return {
+      fen,
+      turn: g.turn(),
+      recentMoves,
+      lastMoveSan: history[history.length - 1] ?? null,
+      evalText: snap?.lines[0]?.scoreText ?? 'unknown',
+      lines: (snap?.lines ?? []).filter(Boolean),
+      threatSan: this.threat && this.threat.fen === fen ? this.threat.san : null,
+    };
+  }
+
+  _factsReady(facts) {
+    if (facts.lines.length === 0) {
+      this.coachSay('Give the engine a moment to analyze first, then ask again.', 'hint');
+      return false;
+    }
+    return true;
+  }
+
+  /** Option 1: local bridge — serve.py runs `claude -p` on this machine. */
+  async explainWithClaude() {
+    if (this._explaining || !this.claudeBridge) return;
+    const facts = this.collectFacts();
+    if (!this._factsReady(facts)) return;
+    this._explaining = true;
+    const btn = $('#btn-explain');
+    btn.disabled = true;
+    const el = this.coachSay('✨ Claude is looking at the position…', 'claude');
+    try {
+      const text = await explainViaBridge(buildCoachPrompt(facts));
+      el.textContent = text || 'Claude returned an empty answer — try again.';
+    } catch (err) {
+      el.textContent = `Claude bridge error: ${err.message}`;
+      el.classList.add('coach-warning');
+    } finally {
+      this._explaining = false;
+      btn.disabled = !this.claudeBridge;
+      $('#coach-messages').scrollTop = $('#coach-messages').scrollHeight;
+    }
+  }
+
+  /** Option 2: open claude.ai with the prompt pre-filled (works anywhere). */
+  askOnClaudeAi() {
+    const facts = this.collectFacts();
+    if (!this._factsReady(facts)) return;
+    window.open(claudeAiUrl(buildCoachPrompt(facts)), '_blank', 'noopener');
+  }
+
   // ---- coach chat UI --------------------------------------------------------
 
   coachSay(text, kind = 'note') {
-    if (!text) return;
+    if (!text) return null;
     const box = $('#coach-messages');
     const el = document.createElement('div');
     el.className = `coach-msg coach-${kind}`;
@@ -687,6 +765,7 @@ class App {
     box.appendChild(el);
     while (box.children.length > 40) box.removeChild(box.firstChild);
     box.scrollTop = box.scrollHeight;
+    return el;
   }
 
   clearCoach() {

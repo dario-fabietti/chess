@@ -46,6 +46,26 @@ just guarantees the right MIME types for the WASM engine.
 - **Analysis board** — free movement for both sides, navigate the game with
   arrow keys or the move list, import/export FEN and PGN.
 
+## LLM coach — explain positions with your Claude plan
+
+The coach panel has two "ask Claude" buttons. Both feed Claude the engine's
+lines and evals as ground truth and ask it to explain the *ideas* (LLMs are
+unreliable at raw calculation). Neither needs an Anthropic API key.
+
+1. **✨ Explain (local bridge).** When the app is served by `serve.py` on a
+   machine where [Claude Code](https://claude.com/claude-code) is installed
+   and logged in, the button sends the position to `POST /api/explain`, which
+   runs `claude -p` locally — authenticated by your Claude subscription. The
+   endpoint only accepts requests from localhost. Overrides: `CLAUDE_BIN`
+   (path to the CLI), `CLAUDE_MODEL` (e.g. `haiku` for faster/cheaper runs).
+   If Claude Code isn't found the button is disabled with a hint.
+2. **claude.ai ↗ (hand-off).** Opens claude.ai in a new tab with the full
+   coaching prompt pre-filled — you just press send. Works anywhere,
+   including the GitHub Pages deployment, on your own Claude plan.
+
+The prompt builder lives in `js/llm.js`; the facts it consumes (FEN, recent
+moves, MultiPV lines, threat) are collected in `App.collectFacts()`.
+
 ## Project layout
 
 ```
@@ -55,6 +75,7 @@ js/app.js             main controller: game state, engines, coach pipeline, UI
 js/board.js           board rendering, drag & drop, SVG arrow/circle overlay
 js/engine.js          UCI protocol wrapper around the Stockfish worker
 js/coach.js           move classification + coaching heuristics (LLM seam)
+js/llm.js             Claude prompt builder + bridge/hand-off transports
 js/sound.js           synthesized sounds (WebAudio)
 vendor/stockfish/     Stockfish 18 Lite single-threaded WASM build (GPLv3)
 vendor/chessjs/       chess.js 1.4.0 ESM build (BSD-2-Clause)
@@ -88,7 +109,8 @@ serve.py / start.sh   zero-dependency static server
 
 ## Ideas for next experiments
 
-- LLM-backed coach commentary (feed it the structured facts from `coach.js`)
+- Stream the local-bridge explanation into the coach panel as it generates,
+  and auto-explain blunders using the same pipeline
 - Full game review ("Game Report") with accuracy score per player
 - Opening book / opening explorer and named openings
 - Clocks and time controls; puzzle mode from blunder positions

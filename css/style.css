@@ -182,6 +182,15 @@ button:hover { background: #474440; }
 .toggles label { user-select: none; }
 
 /* coach */
+.coach h2 { display: flex; align-items: center; justify-content: space-between; }
+.coach-actions { display: flex; gap: 6px; }
+.coach-actions button {
+  font-size: 11px; padding: 3px 8px; letter-spacing: 0; text-transform: none;
+}
+.coach-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+#btn-explain { border-color: #b0673e; }
+#btn-explain:not(:disabled):hover { background: #b0673e; color: #fff; }
+
 .coach-messages {
   max-height: 200px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 6px;
@@ -194,6 +203,7 @@ button:hover { background: #474440; }
   border-left: 3px solid var(--muted);
 }
 .coach-intro { border-left-color: var(--accent); }
+.coach-claude { border-left-color: #d97757; white-space: pre-wrap; }
 .coach-praise { border-left-color: #81b64c; }
 .coach-warning { border-left-color: #e02828; }
 .coach-hint { border-left-color: #e6a23c; }
