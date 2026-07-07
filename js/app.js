@@ -11,6 +11,10 @@ import {
 } from './coach.js';
 import { sounds, setSoundEnabled } from './sound.js';
 import { buildCoachPrompt, claudeAiUrl, checkBridge, explainViaBridge } from './llm.js';
+import {
+  annotateCandidates, recommendForElo, audienceProfile, windowCp,
+  ELO_MIN, ELO_MAX, ELO_DEFAULT,
+} from './levels.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -36,6 +40,7 @@ class App {
     this.playerColor = 'w';
     this.levelIndex = 3;
     this.show = { engineArrows: true, threats: true, coach: true, moveEvals: true };
+    this.explanationElo = clampElo(+(localStorage.getItem('explainElo')) || ELO_DEFAULT);
     this.analysisCache = new Map(); // fen -> {depth, lines: [{scoreWhiteCp, score, stm, uci, san, pvSan}]}
     this.pendingReviews = [];       // moves awaiting classification
     this.threat = null;             // {fen, uci, san}
@@ -50,7 +55,7 @@ class App {
     });
 
     this.analyzer = new Engine('analyzer');
-    this.analyzer.setOption('MultiPV', 3);
+    this.analyzer.setOption('MultiPV', 5); // top 3 shown; all 5 feed the LLM coach
     this.analyzer.onInfo = (info) => this.onAnalysisInfo(info);
 
     this.sparring = new Engine('sparring');
@@ -109,6 +114,17 @@ class App {
     $('#btn-hint').addEventListener('click', () => this.hint());
     $('#btn-explain').addEventListener('click', () => this.explainWithClaude());
     $('#btn-ask-claude').addEventListener('click', () => this.askOnClaudeAi());
+
+    const eloSlider = $('#explain-elo');
+    eloSlider.min = ELO_MIN;
+    eloSlider.max = ELO_MAX;
+    eloSlider.value = this.explanationElo;
+    $('#elo-value').textContent = this.explanationElo;
+    eloSlider.addEventListener('input', () => {
+      this.explanationElo = clampElo(+eloSlider.value);
+      $('#elo-value').textContent = this.explanationElo;
+      localStorage.setItem('explainElo', String(this.explanationElo));
+    });
 
     $('#btn-first').addEventListener('click', () => this.goTo(0));
     $('#btn-prev').addEventListener('click', () => this.goTo(this.viewIndex - 1));
@@ -335,13 +351,17 @@ class App {
     const g = this.viewGame();
     if (g.isGameOver()) return;
     const snap = this.analysisCache.get(g.fen());
-    const best = snap?.lines[0];
-    if (best?.uci) {
+    const lines = (snap?.lines ?? []).filter(Boolean);
+    const rec = recommendForElo(annotateCandidates(g.fen(), lines), this.explanationElo);
+    if (rec?.uci) {
       this.board.setAutoShapes([
         ...this.currentAutoShapes(),
-        { from: best.uci.slice(0, 2), to: best.uci.slice(2, 4), color: 'yellow', width: 2.2, opacity: 0.95 },
+        { from: rec.uci.slice(0, 2), to: rec.uci.slice(2, 4), color: 'yellow', width: 2.2, opacity: 0.95 },
       ]);
-      this.coachSay(`Hint: try ${best.san}. ${snap.lines[0].pvSan ? `The idea: ${best.pvSan}` : ''}`, 'hint');
+      const why = rec.features.length ? ` — ${rec.features.join(', ')}` : '';
+      const alt = rec.rank > 0 && lines[0]?.san
+        ? ` (the engine's absolute best is ${lines[0].san}, but this one is easier to handle)` : '';
+      this.coachSay(`Hint for ~${this.explanationElo}: try ${rec.san}${why}${alt}.`, 'hint');
     } else {
       this.coachSay('Give me a second to look at the position, then ask again.', 'hint');
     }
@@ -517,7 +537,7 @@ class App {
   }
 
   renderLines(snap, info) {
-    const rows = snap.lines.filter(Boolean).map((l) => `
+    const rows = snap.lines.filter(Boolean).slice(0, 3).map((l) => `
       <div class="line">
         <span class="line-eval ${l.scoreWhiteCp >= 0 ? 'pos' : 'neg'}">${l.scoreText}</span>
         <span class="line-pv">${l.pvSan}</span>
@@ -533,7 +553,7 @@ class App {
     if (this.show.engineArrows && snap) {
       const widths = [2.0, 1.4, 1.1];
       const opac = [0.85, 0.45, 0.3];
-      snap.lines.filter(Boolean).forEach((l, i) => {
+      snap.lines.filter(Boolean).slice(0, 3).forEach((l, i) => {
         if (!l.uci || l.uci.length < 4) return;
         shapes.push({
           from: l.uci.slice(0, 2), to: l.uci.slice(2, 4),
@@ -706,13 +726,20 @@ class App {
       const ply = offset + i;
       return ply % 2 === 0 ? `${startNum + ply / 2}.${san}` : san;
     }).join(' ');
+    const lines = (snap?.lines ?? []).filter(Boolean);
+    const candidates = annotateCandidates(fen, lines);
     return {
       fen,
       turn: g.turn(),
       recentMoves,
       lastMoveSan: history[history.length - 1] ?? null,
       evalText: snap?.lines[0]?.scoreText ?? 'unknown',
-      lines: (snap?.lines ?? []).filter(Boolean),
+      lines,
+      candidates,
+      recommended: recommendForElo(candidates, this.explanationElo),
+      elo: this.explanationElo,
+      audience: audienceProfile(this.explanationElo),
+      windowCp: windowCp(this.explanationElo),
       threatSan: this.threat && this.threat.fen === fen ? this.threat.san : null,
     };
   }
@@ -783,6 +810,11 @@ class App {
     clearTimeout(this._flashTimer);
     this._flashTimer = setTimeout(() => el.classList.remove('show'), 1500);
   }
+}
+
+function clampElo(v) {
+  if (!Number.isFinite(v)) return ELO_DEFAULT;
+  return Math.max(ELO_MIN, Math.min(ELO_MAX, Math.round(v / 50) * 50));
 }
 
 window.app = new App();

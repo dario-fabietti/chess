@@ -16,14 +16,18 @@
 
 /** @param {object} f facts collected by the app (see App.collectFacts) */
 export function buildCoachPrompt(f) {
-  const lines = f.lines
-    .map((l, i) => `${i + 1}. eval ${l.scoreText} — ${l.pvSan}`)
-    .join('\n');
+  const candidates = (f.candidates ?? []).map((c, i) => {
+    const delta = c.deltaCp === 0 ? 'engine best'
+      : `${(c.deltaCp / 100).toFixed(2)} pawns worse than best`;
+    return `${i + 1}. ${c.san} (eval ${c.scoreText}, ${delta}) — ${c.features.join(', ')}. Line: ${c.pvSan}`;
+  }).join('\n');
+  const rec = f.recommended;
   return [
-    'You are a friendly chess coach talking to a club-level player.',
+    `You are a friendly chess coach. Your student is rated about ${f.elo} Elo — ${f.audience.label}.`,
+    f.audience.guidance,
     'Use the engine facts below as ground truth. Do NOT calculate or invent',
-    'lines yourself — explain the *ideas* behind the engine\'s suggestions:',
-    'plans, threats, piece activity, pawn structure, king safety.',
+    'lines yourself — explain the *ideas*: plans, threats, piece activity,',
+    'pawn structure, king safety, at a depth this student can absorb.',
     'Answer in plain text (no markdown, no headers), under 180 words.',
     '',
     `Position (FEN): ${f.fen}`,
@@ -31,12 +35,19 @@ export function buildCoachPrompt(f) {
     f.recentMoves ? `Recent moves: ${f.recentMoves}` : null,
     f.lastMoveSan ? `Last move played: ${f.lastMoveSan}` : null,
     `Engine evaluation: ${f.evalText} (positive = better for White)`,
-    'Engine lines, best first (evals from White\'s point of view):',
-    lines,
+    'Candidate moves, engine order (evals from White\'s point of view):',
+    candidates,
+    rec ? `Practical recommendation for this student: ${rec.san}`
+      + ` (a ~${f.elo}-rated player can realistically find and handle it;`
+      + ` moves within about ${(f.windowCp / 100).toFixed(1)} pawns of best are acceptable at this level).`
+      : null,
     f.threatSan ? `If the side to move did nothing, the opponent's threat would be: ${f.threatSan}` : null,
     '',
-    'Explain in simple terms what is going on in this position and why the',
-    'engine\'s top suggestion is strong. Compare the alternatives briefly.',
+    'Coach the student: explain what is going on, then recommend ONE move',
+    'appropriate for their level — prefer the practical recommendation above.',
+    'If the engine\'s absolute best move is different, mention it in one',
+    'sentence, but do not push the student toward a move they cannot follow up.',
+    f.threatSan ? 'Also make sure they see the opponent\'s threat.' : null,
   ].filter((s) => s !== null).join('\n');
 }
 

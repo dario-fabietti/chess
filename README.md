@@ -66,6 +66,22 @@ unreliable at raw calculation). Neither needs an Anthropic API key.
 The prompt builder lives in `js/llm.js`; the facts it consumes (FEN, recent
 moves, MultiPV lines, threat) are collected in `App.collectFacts()`.
 
+### ELO-aware coaching
+
+The **Coach ELO** slider (600–2600) sets who the coach is talking to. The
+engine still analyzes at full strength, but the move the coach recommends —
+in LLM explanations and in the **Hint** button — is chosen for that rating:
+each MultiPV candidate is annotated with human-findability features
+(captures, checks, castling, development, …) and the recommendation
+maximizes findability within a rating-dependent eval window (~3 pawns of
+tolerance at 600 Elo shrinking to ~0.15 at 2600, converging to the engine
+move). The explanation style also adapts: beginners get "castle your king,
+watch the hanging knight" with no jargon; experts get concrete lines. The
+algorithm study (alternatives considered: Skill Level, depth-limited search,
+Maia networks) and the exact formulas live in
+[docs/elo-coaching.md](docs/elo-coaching.md); implementation in
+`js/levels.js`.
+
 ## Project layout
 
 ```
@@ -75,6 +91,7 @@ js/app.js             main controller: game state, engines, coach pipeline, UI
 js/board.js           board rendering, drag & drop, SVG arrow/circle overlay
 js/engine.js          UCI protocol wrapper around the Stockfish worker
 js/coach.js           move classification + coaching heuristics (LLM seam)
+js/levels.js          ELO-aware move recommendation (window + findability)
 js/llm.js             Claude prompt builder + bridge/hand-off transports
 js/sound.js           synthesized sounds (WebAudio)
 vendor/stockfish/     Stockfish 18 Lite single-threaded WASM build (GPLv3)

@@ -61,6 +61,11 @@
           <button id="btn-undo" title="Take back">Undo</button>
           <button id="btn-hint" title="Ask the coach for a hint">Hint</button>
         </div>
+        <div class="row elo-row">
+          <label for="explain-elo" title="The coach explains moves a player of this strength can find and understand">Coach&nbsp;ELO</label>
+          <input type="range" id="explain-elo" min="600" max="2600" step="50" value="1200">
+          <span id="elo-value">1200</span>
+        </div>
         <div class="row toggles">
           <label><input type="checkbox" id="toggle-arrows" checked> Engine arrows</label>
           <label><input type="checkbox" id="toggle-evals" checked> Move evals</label>

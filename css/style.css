@@ -181,6 +181,14 @@ button:hover { background: #474440; }
 #btn-new:hover { filter: brightness(1.1); }
 .toggles label { user-select: none; }
 
+.elo-row { flex-wrap: nowrap; }
+.elo-row input[type="range"] { flex: 1; accent-color: var(--accent); min-width: 80px; }
+#elo-value {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  background: var(--panel-2); border-radius: 4px; padding: 2px 7px; min-width: 34px;
+  text-align: center;
+}
+
 /* coach */
 .coach h2 { display: flex; align-items: center; justify-content: space-between; }
 .coach-actions { display: flex; gap: 6px; }
