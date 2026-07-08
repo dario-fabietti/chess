@@ -15,6 +15,9 @@ import {
   annotateCandidates, recommendForElo, audienceProfile, windowCp,
   ELO_MIN, ELO_MAX, ELO_DEFAULT,
 } from './levels.js';
+import {
+  bandForElo, clampLearnerElo, buildLearnerPrompt, localExplanation,
+} from './learn.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -41,6 +44,9 @@ class App {
     this.levelIndex = 3;
     this.show = { engineArrows: true, threats: true, coach: true, moveEvals: true };
     this.explanationElo = clampElo(+(localStorage.getItem('explainElo')) || ELO_DEFAULT);
+    this.learnerElo = clampLearnerElo(+(localStorage.getItem('learnerElo')) || this.explanationElo);
+    this._learnKey = null;        // fen|elo of the explanation currently shown
+    this._learnExplaining = false;
     this.analysisCache = new Map(); // fen -> {depth, lines: [{scoreWhiteCp, score, stm, uci, san, pvSan}]}
     this.pendingReviews = [];       // moves awaiting classification
     this.threat = null;             // {fen, uci, san}
@@ -61,6 +67,7 @@ class App {
     this.sparring = new Engine('sparring');
 
     this.bindUI();
+    this.renderLearnPanel();
     this.coachSay(greeting(this.mode, this.playerColor), 'intro');
     this.refresh();
     this.setEngineStatus('loading…');
@@ -77,6 +84,8 @@ class App {
       if (!available) {
         btn.title = 'Needs the local bridge: run the app via serve.py on a machine '
           + 'with Claude Code installed and logged in. Use "claude.ai ↗" instead.';
+        $('#btn-personal-explain').title = 'No local Claude bridge — opens claude.ai '
+          + 'with the personalized prompt pre-filled instead.';
       }
     });
   }
@@ -116,15 +125,39 @@ class App {
     $('#btn-ask-claude').addEventListener('click', () => this.askOnClaudeAi());
 
     const eloSlider = $('#explain-elo');
+    const learnerSlider = $('#learner-elo');
     eloSlider.min = ELO_MIN;
     eloSlider.max = ELO_MAX;
     eloSlider.value = this.explanationElo;
     $('#elo-value').textContent = this.explanationElo;
+    learnerSlider.value = this.learnerElo;
+    $('#learner-elo-value').textContent = this.learnerElo;
+
+    // The two sliders track one idea — the student's level. Moving either
+    // updates both (each clamped to its own range).
+    const syncEloUi = () => {
+      eloSlider.value = this.explanationElo;
+      $('#elo-value').textContent = this.explanationElo;
+      learnerSlider.value = this.learnerElo;
+      $('#learner-elo-value').textContent = this.learnerElo;
+      localStorage.setItem('explainElo', String(this.explanationElo));
+      localStorage.setItem('learnerElo', String(this.learnerElo));
+      this.renderLearnPanel();
+      this._learnKey = null;
+      this.maybeUpdateLearnExplanation();
+    };
     eloSlider.addEventListener('input', () => {
       this.explanationElo = clampElo(+eloSlider.value);
-      $('#elo-value').textContent = this.explanationElo;
-      localStorage.setItem('explainElo', String(this.explanationElo));
+      this.learnerElo = clampLearnerElo(this.explanationElo);
+      syncEloUi();
     });
+    learnerSlider.addEventListener('input', () => {
+      this.learnerElo = clampLearnerElo(+learnerSlider.value);
+      this.explanationElo = clampElo(this.learnerElo);
+      syncEloUi();
+    });
+
+    $('#btn-personal-explain').addEventListener('click', () => this.personalizedExplain());
 
     $('#btn-first').addEventListener('click', () => this.goTo(0));
     $('#btn-prev').addEventListener('click', () => this.goTo(this.viewIndex - 1));
@@ -406,6 +439,7 @@ class App {
     this.renderMoveList();
     this.renderStatus(g);
     this.startAnalysis();
+    this.maybeUpdateLearnExplanation();
   }
 
   renderStatus(g) {
@@ -532,6 +566,7 @@ class App {
       this.renderLines(snap, info);
       if (info.multipv === 1) this.updateEvalBar(snap.lines[0].scoreWhiteCp, snap.lines[0].scoreText);
       this.updateArrows();
+      this.maybeUpdateLearnExplanation();
     }
     this.processPendingReviews();
   }
@@ -602,6 +637,8 @@ class App {
       this.threat = uci ? { fen, uci, san: uciToSan(nf, uci) } : null;
       this.updateArrows();
       this.maybeWarnThreat(fen);
+      this._learnKey = null; // threat is part of the explanation — refresh it
+      this.maybeUpdateLearnExplanation();
     } catch (err) {
       console.error('threat calc failed', err);
     }
@@ -741,6 +778,8 @@ class App {
       audience: audienceProfile(this.explanationElo),
       windowCp: windowCp(this.explanationElo),
       threatSan: this.threat && this.threat.fen === fen ? this.threat.san : null,
+      learnerElo: this.learnerElo,
+      gameOver: g.isGameOver(),
     };
   }
 
@@ -781,6 +820,69 @@ class App {
     window.open(claudeAiUrl(buildCoachPrompt(facts)), '_blank', 'noopener');
   }
 
+  // ---- learning sidebar (ELO-tailored explanations) -------------------------
+
+  /** Fill the skills/goals bullets for the current learner band. */
+  renderLearnPanel() {
+    const band = bandForElo(this.learnerElo);
+    $('#learn-band-label').textContent = `${band.min}–${band.max} · ${band.title}`;
+    $('#learn-skills').innerHTML = band.skills.map((s) => `<li>${s}</li>`).join('');
+    $('#learn-goals').innerHTML = band.goals.map((s) => `<li>${s}</li>`).join('');
+  }
+
+  /**
+   * Keep the explanation field current: once the engine has looked deep
+   * enough at the displayed position, write the rule-based explanation for
+   * the current learner ELO (once per fen+elo, so a Claude answer for the
+   * same position is not clobbered).
+   */
+  maybeUpdateLearnExplanation() {
+    const g = this.viewGame();
+    const fen = g.fen();
+    const snap = this.analysisCache.get(fen);
+    const ready = g.isGameOver() || (snap && snap.depth >= CLASSIFY_MIN_DEPTH && snap.lines[0]);
+    if (!ready) {
+      $('#learn-status').textContent = 'engine thinking…';
+      return;
+    }
+    const key = `${fen}|${this.learnerElo}`;
+    if (this._learnKey === key) return;
+    this._learnKey = key;
+    $('#learn-explanation').value = localExplanation(this.collectFacts());
+    $('#learn-status').textContent = 'auto · from engine';
+  }
+
+  /**
+   * "Personalized explanation": send the per-ELO prompt (band profile +
+   * style contract + depth-trimmed engine facts) to Claude via the local
+   * bridge, or open claude.ai pre-filled when there is no bridge.
+   */
+  async personalizedExplain() {
+    if (this._learnExplaining) return;
+    const facts = this.collectFacts();
+    if (!this._factsReady(facts)) return;
+    const prompt = buildLearnerPrompt(facts);
+    if (!this.claudeBridge) {
+      window.open(claudeAiUrl(prompt), '_blank', 'noopener');
+      return;
+    }
+    this._learnExplaining = true;
+    const btn = $('#btn-personal-explain');
+    btn.disabled = true;
+    $('#learn-status').textContent = '✨ asking Claude…';
+    try {
+      const text = await explainViaBridge(prompt);
+      $('#learn-explanation').value = text || 'Claude returned an empty answer — try again.';
+      $('#learn-status').textContent = '✨ Claude · personalized';
+      this._learnKey = `${facts.fen}|${this.learnerElo}`; // keep the auto text from overwriting it
+    } catch (err) {
+      $('#learn-status').textContent = `bridge error: ${err.message}`;
+    } finally {
+      this._learnExplaining = false;
+      btn.disabled = false;
+    }
+  }
+
   // ---- coach chat UI --------------------------------------------------------
 
   coachSay(text, kind = 'note') {
@@ -797,6 +899,9 @@ class App {
 
   clearCoach() {
     $('#coach-messages').innerHTML = '';
+    this._learnKey = null;
+    $('#learn-explanation').value = '';
+    $('#learn-status').textContent = '';
   }
 
   setEngineStatus(text) {

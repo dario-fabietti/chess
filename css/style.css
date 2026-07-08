@@ -189,6 +189,33 @@ button:hover { background: #474440; }
   text-align: center;
 }
 
+/* ---- learning sidebar (left) ---- */
+.learn-side { width: 300px; }
+.learn h2 { display: flex; align-items: baseline; justify-content: space-between; }
+.learn-band {
+  text-transform: none; letter-spacing: 0; font-size: 11px;
+  color: var(--accent); font-weight: 700;
+}
+.learn h3 {
+  margin: 10px 0 4px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted); font-weight: 700;
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.learn-status { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.learn-list {
+  margin: 0; padding-left: 16px;
+  font-size: 12px; line-height: 1.45; color: var(--text);
+}
+.learn-list li { margin-bottom: 3px; }
+.learn-list li::marker { color: var(--accent); }
+#learn-explanation {
+  font-family: inherit; font-size: 12.5px; line-height: 1.45;
+  min-height: 120px;
+}
+#btn-personal-explain { width: 100%; border-color: #b0673e; }
+#btn-personal-explain:not(:disabled):hover { background: #b0673e; color: #fff; }
+#btn-personal-explain:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* coach */
 .coach h2 { display: flex; align-items: center; justify-content: space-between; }
 .coach-actions { display: flex; gap: 6px; }
@@ -270,4 +297,6 @@ footer {
 
 @media (max-width: 1080px) {
   .side { width: min(640px, 92vw); }
+  .learn-side { order: 2; }   /* board first on small screens */
+  .board-area { order: 1; }
 }

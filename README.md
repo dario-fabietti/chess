@@ -82,6 +82,22 @@ Maia networks) and the exact formulas live in
 [docs/elo-coaching.md](docs/elo-coaching.md); implementation in
 `js/levels.js`.
 
+### Learning sidebar (explanations by ELO)
+
+The left sidebar turns the coaching research into per-level teaching. Pick a
+**Learner ELO** (400–2000, synced with the Coach ELO slider) and the panel
+shows what a player of that strength typically can do, what they should be
+learning right now, and an **explanation of the current position written for
+exactly that level** — a 500 hears "your knight is free to take", a 1700
+gets plans, structures and evals. The explanation field fills automatically
+from the engine (rule-based, offline); the **✨ Personalized explanation**
+button sends a band-specific prompt — student profile, learning goals, a
+strict style contract, and engine lines *pre-truncated to the band's depth*
+— to Claude via the local bridge (or claude.ai hand-off). Strategy and the
+prompt set: [docs/learning-prompts.md](docs/learning-prompts.md); band data
+and builders: `js/learn.js`; source research:
+[docs/coaching/](docs/coaching/README.md).
+
 ## Project layout
 
 ```
@@ -92,6 +108,7 @@ js/board.js           board rendering, drag & drop, SVG arrow/circle overlay
 js/engine.js          UCI protocol wrapper around the Stockfish worker
 js/coach.js           move classification + coaching heuristics (LLM seam)
 js/levels.js          ELO-aware move recommendation (window + findability)
+js/learn.js           learning sidebar: per-band skills/goals + ELO-tailored prompts
 js/llm.js             Claude prompt builder + bridge/hand-off transports
 js/sound.js           synthesized sounds (WebAudio)
 vendor/stockfish/     Stockfish 18 Lite single-threaded WASM build (GPLv3)

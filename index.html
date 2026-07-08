@@ -14,6 +14,28 @@
   </header>
 
   <main>
+    <aside class="side learn-side">
+      <section class="panel learn">
+        <h2>🎯 Learning <span id="learn-band-label" class="learn-band"></span></h2>
+        <div class="row elo-row">
+          <label for="learner-elo" title="The level the explanations are written for">Learner&nbsp;ELO</label>
+          <input type="range" id="learner-elo" min="400" max="2000" step="50" value="800">
+          <span id="learner-elo-value">800</span>
+        </div>
+        <h3>At this level you…</h3>
+        <ul id="learn-skills" class="learn-list"></ul>
+        <h3>Learning goals</h3>
+        <ul id="learn-goals" class="learn-list"></ul>
+        <h3>Explanation <span id="learn-status" class="learn-status"></span></h3>
+        <textarea id="learn-explanation" rows="10" readonly
+          placeholder="Make a move or load a position — an explanation tuned to this level appears here once the engine has looked."></textarea>
+        <div class="row buttons">
+          <button id="btn-personal-explain"
+            title="Ask Claude for an explanation personalized to this learner and position">✨ Personalized explanation</button>
+        </div>
+      </section>
+    </aside>
+
     <section class="board-area">
       <div class="eval-bar" title="Evaluation (White's perspective)">
         <div id="eval-fill"></div>
