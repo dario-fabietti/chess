@@ -247,7 +247,9 @@ export class Board {
     const icon = shape.badgeIcon ? String(shape.badgeIcon) : '';
     const full = icon ? `${icon} ${text}` : text;
     const h = 2.5;
-    const w = full.length * 1.15 + 1.2;
+    // Code-point count, not UTF-16 length, so surrogate-pair emoji (e.g. the
+    // thumbs-up Excellent icon) don't inflate the badge width.
+    const w = [...full].length * 1.15 + 1.2;
     const rx = x * 12.5 + 12.5 - w - 0.35;
     const ry = y * 12.5 + 0.35;
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');

@@ -37,16 +37,16 @@ export function thresholdsForElo(elo) {
 }
 
 /**
- * Move-class badges and colors, following chess.com's Game Review palette
+ * Move-class badges and colors, following chess.com's Game Review icons
  * (their icons are graphics; these are the closest single-glyph stand-ins
- * for a no-image-assets app — star for Best, check for Excellent, and the
- * conventional ?! / ? / ?? annotation glyphs chess.com itself overlays for
- * Inaccuracy/Mistake/Blunder).
+ * for a no-image-assets app) — star for Best, thumbs-up for Excellent,
+ * check mark for Good, and the conventional ?! / ? / ?? annotation glyphs
+ * chess.com itself overlays for Inaccuracy/Mistake/Blunder.
  */
 export const CLASSIFICATION_BADGES = {
   best:       { badge: '★',  color: '#81b64c', label: 'Best move' },
-  excellent:  { badge: '✓',  color: '#59a8a0', label: 'Excellent' },
-  good:       { badge: '',   color: '#95b776', label: 'Good move' },
+  excellent:  { badge: '👍', color: '#59a8a0', label: 'Excellent' },
+  good:       { badge: '✓',  color: '#95b776', label: 'Good move' },
   inaccuracy: { badge: '?!', color: '#f7c045', label: 'Inaccuracy' },
   mistake:    { badge: '?',  color: '#e6912c', label: 'Mistake' },
   blunder:    { badge: '??', color: '#fa412d', label: 'Blunder' },

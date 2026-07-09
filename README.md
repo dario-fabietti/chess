@@ -40,10 +40,10 @@ just guarantees the right MIME types for the WASM engine.
   - user arrows: right-click drag (plain = green, Shift = red, Alt = blue,
     Ctrl = yellow); right-click a square for a circle; left-click clears.
 - **AI coach (baseline)** — reviews every move against the engine (Best
-  `★` / Excellent `✓` / Good / Inaccuracy `?!` / Mistake `?` / Blunder `??`,
-  chess.com's move-class glyphs and colors, shown in the move list and on
-  the board), suggests the better move, warns about opponent threats and
-  hanging pieces, and gives hints on demand.
+  `★` / Excellent `👍` / Good `✓` / Inaccuracy `?!` / Mistake `?` /
+  Blunder `??`, chess.com's move-class glyphs and colors, shown in the
+  move list and on the board), suggests the better move, warns about
+  opponent threats and hanging pieces, and gives hints on demand.
 - **ELO-relative evaluation (experimental)** — the "ELO-relative eval"
   checkbox judges moves against the Learner ELO instead of the absolute
   engine scale: a 300 cp slip is a normal move at 400 but a blunder at
