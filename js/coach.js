@@ -37,20 +37,37 @@ export function thresholdsForElo(elo) {
 }
 
 /**
+ * Move-class badges and colors, following chess.com's Game Review palette
+ * (their icons are graphics; these are the closest single-glyph stand-ins
+ * for a no-image-assets app — star for Best, check for Excellent, and the
+ * conventional ?! / ? / ?? annotation glyphs chess.com itself overlays for
+ * Inaccuracy/Mistake/Blunder).
+ */
+export const CLASSIFICATION_BADGES = {
+  best:       { badge: '★',  color: '#81b64c', label: 'Best move' },
+  excellent:  { badge: '✓',  color: '#59a8a0', label: 'Excellent' },
+  good:       { badge: '',   color: '#95b776', label: 'Good move' },
+  inaccuracy: { badge: '?!', color: '#f7c045', label: 'Inaccuracy' },
+  mistake:    { badge: '?',  color: '#e6912c', label: 'Mistake' },
+  blunder:    { badge: '??', color: '#fa412d', label: 'Blunder' },
+};
+
+/**
  * Classify a played move by centipawn loss (from the mover's perspective).
  * With `relative` and an `elo`, thresholds adapt to the player's level:
  * the same 300cp loss can be a normal move at 400 and a blunder at 2000.
  */
 export function classifyMove({ cpLoss, isBest, mateMissed, mateAllowed, elo = null, relative = false }) {
   const t = relative && Number.isFinite(elo) ? thresholdsForElo(elo) : ABSOLUTE_THRESHOLDS;
-  if (mateAllowed) return { key: 'blunder', badge: '??', label: 'Blunder' };
-  if (isBest || cpLoss <= t.best) return { key: 'best', badge: '!', label: 'Best move' };
-  if (mateMissed && cpLoss > t.inaccuracy) return { key: 'mistake', badge: '?', label: 'Missed win' };
-  if (cpLoss <= t.excellent) return { key: 'excellent', badge: '⭑', label: 'Excellent' };
-  if (cpLoss <= t.good) return { key: 'good', badge: '', label: 'Good move' };
-  if (cpLoss <= t.inaccuracy) return { key: 'inaccuracy', badge: '?!', label: 'Inaccuracy' };
-  if (cpLoss <= t.mistake) return { key: 'mistake', badge: '?', label: 'Mistake' };
-  return { key: 'blunder', badge: '??', label: 'Blunder' };
+  const cls = (key) => ({ key, ...CLASSIFICATION_BADGES[key] });
+  if (mateAllowed) return cls('blunder');
+  if (isBest || cpLoss <= t.best) return cls('best');
+  if (mateMissed && cpLoss > t.inaccuracy) return { key: 'mistake', badge: '?', color: CLASSIFICATION_BADGES.mistake.color, label: 'Missed win' };
+  if (cpLoss <= t.excellent) return cls('excellent');
+  if (cpLoss <= t.good) return cls('good');
+  if (cpLoss <= t.inaccuracy) return cls('inaccuracy');
+  if (cpLoss <= t.mistake) return cls('mistake');
+  return cls('blunder');
 }
 
 export function commentForClassification(cls, { san, bestSan, cpLoss }) {

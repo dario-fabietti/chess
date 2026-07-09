@@ -604,13 +604,27 @@ class App {
     if (this.show.engineArrows && snap) {
       const widths = [2.0, 1.4, 1.1];
       const opac = [0.85, 0.45, 0.3];
-      snap.lines.filter(Boolean).slice(0, 3).forEach((l, i) => {
+      const lines = snap.lines.filter(Boolean).slice(0, 3);
+      const bestCp = lines[0]?.scoreWhiteCp;
+      const sign = lines[0]?.stm === 'w' ? 1 : -1;
+      lines.forEach((l, i) => {
         if (!l.uci || l.uci.length < 4) return;
+        let badgeIcon = null, badgeColor = null;
+        if (this.show.moveEvals) {
+          const cpLoss = i === 0 ? 0 : Math.min(5000, Math.max(0, sign * (bestCp - l.scoreWhiteCp)));
+          const cls = classifyMove({
+            cpLoss, isBest: i === 0, mateMissed: false, mateAllowed: false,
+            elo: this.learnerElo, relative: this.relativeEval,
+          });
+          badgeIcon = cls.badge || null;
+          badgeColor = cls.color;
+        }
         shapes.push({
           from: l.uci.slice(0, 2), to: l.uci.slice(2, 4),
           color: i === 0 ? 'green' : 'blue',
           width: widths[i] ?? 1, opacity: opac[i] ?? 0.3,
           label: this.show.moveEvals ? l.scoreText : null,
+          badgeIcon, badgeColor,
         });
       });
     }

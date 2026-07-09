@@ -235,12 +235,19 @@ export class Board {
     if (this._rightDrag?.preview) svg.appendChild(this._shapeEl(this._rightDrag.preview));
   }
 
-  /** Small eval badge in the top-right corner of the shape's target square. */
+  /**
+   * Small eval badge in the top-right corner of the shape's target square.
+   * When `shape.badgeIcon` is set (move-classification icon, e.g. the
+   * engine line's Best/Good/Inaccuracy glyph) it's drawn before the eval
+   * text in `shape.badgeColor`.
+   */
   _labelEl(shape) {
     const { x, y } = this._sqXY(shape.to);
     const text = String(shape.label);
+    const icon = shape.badgeIcon ? String(shape.badgeIcon) : '';
+    const full = icon ? `${icon} ${text}` : text;
     const h = 2.5;
-    const w = text.length * 1.15 + 1.2;
+    const w = full.length * 1.15 + 1.2;
     const rx = x * 12.5 + 12.5 - w - 0.35;
     const ry = y * 12.5 + 0.35;
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -257,8 +264,19 @@ export class Board {
     t.setAttribute('font-size', 1.8);
     t.setAttribute('font-weight', 700);
     t.setAttribute('font-family', 'system-ui, sans-serif');
-    t.setAttribute('fill', '#fff');
-    t.textContent = text;
+    if (icon) {
+      const iconSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+      iconSpan.setAttribute('fill', shape.badgeColor || '#fff');
+      iconSpan.textContent = `${icon} `;
+      t.appendChild(iconSpan);
+      const textSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+      textSpan.setAttribute('fill', '#fff');
+      textSpan.textContent = text;
+      t.appendChild(textSpan);
+    } else {
+      t.setAttribute('fill', '#fff');
+      t.textContent = text;
+    }
     g.appendChild(rect);
     g.appendChild(t);
     return g;
@@ -282,6 +300,13 @@ export class Board {
       return c;
     }
     const to = this._sqXY(shape.to);
+    const dCols = to.x - from.x, dRows = to.y - from.y;
+    const isKnightMove = (Math.abs(dCols) === 1 && Math.abs(dRows) === 2)
+      || (Math.abs(dCols) === 2 && Math.abs(dRows) === 1);
+    const width = shape.width ?? 1.7;
+    if (isKnightMove) {
+      return this._knightArrowEl(from, to, dCols, color, colorName, opacity, width);
+    }
     const x1 = from.x * 12.5 + 6.25, y1 = from.y * 12.5 + 6.25;
     const x2 = to.x * 12.5 + 6.25, y2 = to.y * 12.5 + 6.25;
     const dx = x2 - x1, dy = y2 - y1;
@@ -294,11 +319,40 @@ export class Board {
     line.setAttribute('x1', sx); line.setAttribute('y1', sy);
     line.setAttribute('x2', ex); line.setAttribute('y2', ey);
     line.setAttribute('stroke', color);
-    line.setAttribute('stroke-width', shape.width ?? 1.7);
+    line.setAttribute('stroke-width', width);
     line.setAttribute('stroke-linecap', 'round');
     line.setAttribute('opacity', opacity);
     line.setAttribute('marker-end', `url(#cb-arrowhead-${colorName})`);
     return line;
+  }
+
+  /**
+   * L-shaped arrow for knight moves: bends at the corner square that shares
+   * the destination's file/rank with the long (2-square) leg, so the arrow
+   * visually traces the knight's actual path instead of cutting a diagonal.
+   */
+  _knightArrowEl(from, to, dCols, color, colorName, opacity, width) {
+    const x1 = from.x * 12.5 + 6.25, y1 = from.y * 12.5 + 6.25;
+    const x2 = to.x * 12.5 + 6.25, y2 = to.y * 12.5 + 6.25;
+    const longAxisIsCols = Math.abs(dCols) === 2;
+    const cx = longAxisIsCols ? x2 : x1;
+    const cy = longAxisIsCols ? y1 : y2;
+    const d1x = cx - x1, d1y = cy - y1, len1 = Math.hypot(d1x, d1y);
+    const startOff = 3.2;
+    const sx = x1 + (d1x / len1) * startOff, sy = y1 + (d1y / len1) * startOff;
+    const d2x = x2 - cx, d2y = y2 - cy, len2 = Math.hypot(d2x, d2y);
+    const endOff = 2.4;
+    const ex = x2 - (d2x / len2) * endOff, ey = y2 - (d2y / len2) * endOff;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${sx},${sy} L${cx},${cy} L${ex},${ey}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', width);
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('opacity', opacity);
+    path.setAttribute('marker-end', `url(#cb-arrowhead-${colorName})`);
+    return path;
   }
 
   // ---- interaction ------------------------------------------------------

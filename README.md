@@ -33,14 +33,17 @@ just guarantees the right MIME types for the WASM engine.
 - **Colored arrows**
   - green: engine best move · blue: alternative engine lines
   - red: what the opponent threatens if you pass (null-move search)
-  - each suggested move carries a small eval badge (e.g. `+0.13`) on its
-    destination square (toggleable)
+  - knight moves bend into an L to trace the actual path instead of
+    cutting a diagonal
+  - each suggested move carries a small eval badge (e.g. `★ +0.13`) on its
+    destination square — the move-class icon plus the eval (toggleable)
   - user arrows: right-click drag (plain = green, Shift = red, Alt = blue,
     Ctrl = yellow); right-click a square for a circle; left-click clears.
-- **AI coach (baseline)** — reviews every move against the engine
-  (Best / Excellent / Good / Inaccuracy / Mistake / Blunder with `!` `⭑`
-  `?!` `?` `??` badges in the move list), suggests the better move, warns
-  about opponent threats and hanging pieces, and gives hints on demand.
+- **AI coach (baseline)** — reviews every move against the engine (Best
+  `★` / Excellent `✓` / Good / Inaccuracy `?!` / Mistake `?` / Blunder `??`,
+  chess.com's move-class glyphs and colors, shown in the move list and on
+  the board), suggests the better move, warns about opponent threats and
+  hanging pieces, and gives hints on demand.
 - **ELO-relative evaluation (experimental)** — the "ELO-relative eval"
   checkbox judges moves against the Learner ELO instead of the absolute
   engine scale: a 300 cp slip is a normal move at 400 but a blunder at
