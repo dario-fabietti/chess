@@ -273,6 +273,7 @@ button:hover { background: #474440; }
 .mv-empty { color: var(--muted); font-size: 12.5px; }
 .badge { font-style: normal; font-weight: 800; margin-left: 2px; font-size: 11px; }
 .badge-best { color: #81b64c; }
+.badge-excellent { color: #9bc25e; }
 .badge-good { color: #95b776; }
 .badge-inaccuracy { color: #f7c045; }
 .badge-mistake { color: #e6912c; }

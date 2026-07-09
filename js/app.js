@@ -43,6 +43,7 @@ class App {
     this.playerColor = 'w';
     this.levelIndex = 3;
     this.show = { engineArrows: true, threats: true, coach: true, moveEvals: true };
+    this.relativeEval = localStorage.getItem('relativeEval') === '1';
     this.explanationElo = clampElo(+(localStorage.getItem('explainElo')) || ELO_DEFAULT);
     this.learnerElo = clampLearnerElo(+(localStorage.getItem('learnerElo')) || this.explanationElo);
     this._learnKey = null;        // fen|elo of the explanation currently shown
@@ -55,6 +56,7 @@ class App {
     this._threatFen = null;
     this._fenBySearch = new Map(); // analyzer searchId -> fen it is analyzing
     this.badges = new Map();       // ply -> {badge, key}
+    this.reviewData = new Map();   // ply -> {cpLoss, isBest, mateMissed, mateAllowed} for re-classification
 
     this.board = new Board($('#board'), {
       onUserMove: (from, to) => this.onUserMove(from, to),
@@ -145,6 +147,7 @@ class App {
       this.renderLearnPanel();
       this._learnKey = null;
       this.maybeUpdateLearnExplanation();
+      if (this.relativeEval) this.reclassifyAll();
     };
     eloSlider.addEventListener('input', () => {
       this.explanationElo = clampElo(+eloSlider.value);
@@ -188,6 +191,17 @@ class App {
     }
     $('#toggle-sound').addEventListener('change', (e) => setSoundEnabled(e.target.checked));
 
+    const relToggle = $('#toggle-relative');
+    relToggle.checked = this.relativeEval;
+    relToggle.addEventListener('change', (e) => {
+      this.relativeEval = e.target.checked;
+      localStorage.setItem('relativeEval', this.relativeEval ? '1' : '0');
+      this.reclassifyAll();
+      this.flashStatus(this.relativeEval
+        ? `Judging moves relative to ~${this.learnerElo} ELO`
+        : 'Judging moves on the absolute engine scale');
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
       if (e.key === 'ArrowLeft') { e.preventDefault(); this.goTo(this.viewIndex - 1); }
@@ -216,6 +230,7 @@ class App {
     this.pendingReviews = [];
     this.analysisCache.clear();
     this.badges.clear();
+    this.reviewData.clear();
     this.threat = null;
     this._threatFen = null;
     this.analyzer.newGame();
@@ -249,6 +264,7 @@ class App {
     this.pendingReviews = [];
     this.analysisCache.clear();
     this.badges.clear();
+    this.reviewData.clear();
     this.threat = null;
     this._threatFen = null;
     this.clearCoach();
@@ -297,7 +313,7 @@ class App {
       this.game = this.viewGame();
       this.pendingReviews = this.pendingReviews.filter((r) => r.ply <= this.viewIndex);
       for (const ply of [...this.badges.keys()]) {
-        if (ply > this.viewIndex) this.badges.delete(ply);
+        if (ply > this.viewIndex) { this.badges.delete(ply); this.reviewData.delete(ply); }
       }
     }
     const fenBefore = this.game.fen();
@@ -367,7 +383,7 @@ class App {
     this.viewIndex = this.game.history().length;
     this.pendingReviews = this.pendingReviews.filter((r) => r.ply <= this.viewIndex);
     for (const ply of [...this.badges.keys()]) {
-      if (ply > this.viewIndex) this.badges.delete(ply);
+      if (ply > this.viewIndex) { this.badges.delete(ply); this.reviewData.delete(ply); }
     }
     this.refresh();
   }
@@ -685,7 +701,9 @@ class App {
     const mateAllowed = before.score.type !== 'mate'
       && lineAfter.score.type === 'mate'
       && sign * lineAfter.scoreWhiteCp < 0;
-    const cls = classifyMove({ cpLoss: Math.min(cpLoss, 5000), isBest, mateMissed, mateAllowed });
+    const data = { cpLoss: Math.min(cpLoss, 5000), isBest, mateMissed, mateAllowed };
+    this.reviewData.set(review.ply, data);
+    const cls = classifyMove({ ...data, elo: this.learnerElo, relative: this.relativeEval });
 
     // badge on the move list (history() returns copies, so use a side table)
     this.badges.set(review.ply, { badge: cls.badge, key: cls.key });
@@ -694,7 +712,7 @@ class App {
     // coach comment about the *user's* moves (and notable engine moves)
     if (!this.show.coach) return;
     const isUserMove = this.mode !== 'play' || !review.byEngine;
-    if (isUserMove && (this.mode === 'play' || cls.key !== 'good')) {
+    if (isUserMove && (this.mode === 'play' || (cls.key !== 'good' && cls.key !== 'excellent'))) {
       this.coachSay(
         commentForClassification(cls, {
           san: review.move.san,
@@ -702,7 +720,7 @@ class App {
           cpLoss,
         }),
         cls.key === 'blunder' || cls.key === 'mistake' ? 'warning'
-          : cls.key === 'best' ? 'praise' : 'note'
+          : cls.key === 'best' || cls.key === 'excellent' ? 'praise' : 'note'
       );
     }
     // hanging pieces after the user's move
@@ -726,6 +744,16 @@ class App {
         cell.insertAdjacentHTML('beforeend', `<i class="badge badge-${b.key}">${b.badge}</i>`);
       }
     }
+  }
+
+  /** Re-run classification of every reviewed move (mode or learner ELO changed). */
+  reclassifyAll() {
+    for (const [ply, data] of this.reviewData) {
+      const cls = classifyMove({ ...data, elo: this.learnerElo, relative: this.relativeEval });
+      this.badges.set(ply, { badge: cls.badge, key: cls.key });
+    }
+    document.querySelectorAll('#moves .badge').forEach((el) => el.remove());
+    this.renderMoveListBadges();
   }
 
   announceGameState() {

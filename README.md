@@ -38,9 +38,14 @@ just guarantees the right MIME types for the WASM engine.
   - user arrows: right-click drag (plain = green, Shift = red, Alt = blue,
     Ctrl = yellow); right-click a square for a circle; left-click clears.
 - **AI coach (baseline)** — reviews every move against the engine
-  (Best / Good / Inaccuracy / Mistake / Blunder with `!` `?!` `?` `??`
-  badges in the move list), suggests the better move, warns about
-  opponent threats and hanging pieces, and gives hints on demand.
+  (Best / Excellent / Good / Inaccuracy / Mistake / Blunder with `!` `⭑`
+  `?!` `?` `??` badges in the move list), suggests the better move, warns
+  about opponent threats and hanging pieces, and gives hints on demand.
+- **ELO-relative evaluation (experimental)** — the "ELO-relative eval"
+  checkbox judges moves against the Learner ELO instead of the absolute
+  engine scale: a 300 cp slip is a normal move at 400 but a blunder at
+  2000. Toggling re-classifies the whole game. Thresholds and sources:
+  [docs/relative-evaluation.md](docs/relative-evaluation.md).
 - **Play vs engine** — 8 strength levels (Stockfish skill 0–20), play as
   White or Black, undo (takes back a full move pair).
 - **Analysis board** — free movement for both sides, navigate the game with
@@ -133,9 +138,11 @@ docs/coaching/        deep dive: teaching guide per 200-ELO band (400-2000)
   position.
 - **Move review** is asynchronous: when a move is played, the eval of the
   previous position is snapshotted; the classification is finalized once the
-  new position reaches depth ≥ 12. Centipawn-loss thresholds mirror the ones
-  used by popular sites (≤10 best, ≤40 good, ≤90 inaccuracy, ≤200 mistake,
-  else blunder; allowing a mate is always a blunder).
+  new position reaches depth ≥ 12. On the absolute scale, centipawn-loss
+  thresholds mirror the ones used by popular sites (≤10 best, ≤20 excellent,
+  ≤40 good, ≤90 inaccuracy, ≤200 mistake, else blunder; allowing a mate is
+  always a blunder). With "ELO-relative eval" on, per-band thresholds from
+  [docs/relative-evaluation.md](docs/relative-evaluation.md) apply instead.
 - `js/coach.js` is deliberately template-based and isolated — it is the seam
   where an LLM-backed coach can be plugged in later (it already receives
   structured facts: classification, best line, threats, hanging pieces).

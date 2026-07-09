@@ -10,16 +10,46 @@ const PIECE_NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen'
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
 /**
- * Classify a played move by centipawn loss (from the mover's perspective).
- * Thresholds are close to the ones commonly used by chess sites.
+ * Classification thresholds (upper bound of centipawn loss per class).
+ * Absolute: the fixed "popular site" scale. Relative: per-ELO-band tables
+ * derived from how typical move error scales with rating — see
+ * docs/relative-evaluation.md for sources and the derivation.
  */
-export function classifyMove({ cpLoss, isBest, mateMissed, mateAllowed }) {
+export const ABSOLUTE_THRESHOLDS = { best: 10, excellent: 20, good: 40, inaccuracy: 90, mistake: 200 };
+
+export const RELATIVE_BANDS = [
+  { minElo: 400,  label: '400–600',   best: 25, excellent: 100, good: 300, inaccuracy: 500, mistake: 800 },
+  { minElo: 600,  label: '600–800',   best: 25, excellent: 85,  good: 250, inaccuracy: 425, mistake: 700 },
+  { minElo: 800,  label: '800–1000',  best: 20, excellent: 70,  good: 200, inaccuracy: 360, mistake: 600 },
+  { minElo: 1000, label: '1000–1200', best: 20, excellent: 60,  good: 160, inaccuracy: 300, mistake: 500 },
+  { minElo: 1200, label: '1200–1400', best: 15, excellent: 50,  good: 130, inaccuracy: 250, mistake: 420 },
+  { minElo: 1400, label: '1400–1600', best: 15, excellent: 40,  good: 105, inaccuracy: 210, mistake: 350 },
+  { minElo: 1600, label: '1600–1800', best: 12, excellent: 32,  good: 85,  inaccuracy: 170, mistake: 290 },
+  { minElo: 1800, label: '1800–2000', best: 10, excellent: 25,  good: 60,  inaccuracy: 125, mistake: 240 },
+  { minElo: 2000, label: '2000+',     best: 10, excellent: 20,  good: 40,  inaccuracy: 90,  mistake: 200 },
+];
+
+/** Thresholds for a player of this rating (relative mode). */
+export function thresholdsForElo(elo) {
+  let band = RELATIVE_BANDS[0];
+  for (const b of RELATIVE_BANDS) if (elo >= b.minElo) band = b;
+  return band;
+}
+
+/**
+ * Classify a played move by centipawn loss (from the mover's perspective).
+ * With `relative` and an `elo`, thresholds adapt to the player's level:
+ * the same 300cp loss can be a normal move at 400 and a blunder at 2000.
+ */
+export function classifyMove({ cpLoss, isBest, mateMissed, mateAllowed, elo = null, relative = false }) {
+  const t = relative && Number.isFinite(elo) ? thresholdsForElo(elo) : ABSOLUTE_THRESHOLDS;
   if (mateAllowed) return { key: 'blunder', badge: '??', label: 'Blunder' };
-  if (isBest || cpLoss <= 10) return { key: 'best', badge: '!', label: 'Best move' };
-  if (mateMissed && cpLoss > 100) return { key: 'mistake', badge: '?', label: 'Missed win' };
-  if (cpLoss <= 40) return { key: 'good', badge: '', label: 'Good move' };
-  if (cpLoss <= 90) return { key: 'inaccuracy', badge: '?!', label: 'Inaccuracy' };
-  if (cpLoss <= 200) return { key: 'mistake', badge: '?', label: 'Mistake' };
+  if (isBest || cpLoss <= t.best) return { key: 'best', badge: '!', label: 'Best move' };
+  if (mateMissed && cpLoss > t.inaccuracy) return { key: 'mistake', badge: '?', label: 'Missed win' };
+  if (cpLoss <= t.excellent) return { key: 'excellent', badge: '⭑', label: 'Excellent' };
+  if (cpLoss <= t.good) return { key: 'good', badge: '', label: 'Good move' };
+  if (cpLoss <= t.inaccuracy) return { key: 'inaccuracy', badge: '?!', label: 'Inaccuracy' };
+  if (cpLoss <= t.mistake) return { key: 'mistake', badge: '?', label: 'Mistake' };
   return { key: 'blunder', badge: '??', label: 'Blunder' };
 }
 
@@ -28,6 +58,8 @@ export function commentForClassification(cls, { san, bestSan, cpLoss }) {
   switch (cls.key) {
     case 'best':
       return `${san} — best move! That's exactly what the engine recommends.`;
+    case 'excellent':
+      return `${san} is an excellent move — nearly as strong as the engine's top choice.`;
     case 'good':
       return `${san} is a solid move.`;
     case 'inaccuracy':
