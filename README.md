@@ -155,6 +155,10 @@ docs/coaching/        deep dive: teaching guide per 200-ELO band (400-2000)
 
 ## Ideas for next experiments
 
+- **The plan: [docs/ROADMAP.md](docs/ROADMAP.md)** — gap analysis and
+  phased next steps (quick wins → Game Report → game storage → puzzles →
+  insights → lessons), built on the research below. Full docs index:
+  [docs/README.md](docs/README.md)
 - Replicate chess.com's paid learning features — full research map ordered
   by complexity/feasibility in [docs/chesscom/](docs/chesscom/README.md)
   (Game Review/CAPS2, Brilliant/Great moves, lessons, puzzles, Insights,

@@ -2,7 +2,8 @@
 
 *Deep-dive research (July 2026) meant to be **directly usable when coding**.
 Each doc collects verified formulas/constants/pseudo-code with sources.
-Companion folders: [docs/chesscom/](../chesscom/README.md) (what chess.com
+The build order and gap analysis live in [docs/ROADMAP.md](../ROADMAP.md);
+companion folders: [docs/chesscom/](../chesscom/README.md) (what chess.com
 sells and the replication map), [docs/relative-evaluation.md](../relative-evaluation.md)
 (our ELO-relative thresholds), [docs/coaching/](../coaching/README.md)
 (per-ELO syllabi).*
