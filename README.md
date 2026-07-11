@@ -158,7 +158,8 @@ docs/coaching/        deep dive: teaching guide per 200-ELO band (400-2000)
 - Replicate chess.com's paid learning features — full research map ordered
   by complexity/feasibility in [docs/chesscom/](docs/chesscom/README.md)
   (Game Review/CAPS2, Brilliant/Great moves, lessons, puzzles, Insights,
-  opening explorer)
+  opening explorer); implementation-grade formulas, algorithms and
+  competitor analysis in [docs/research/](docs/research/README.md)
 - Stream the local-bridge explanation into the coach panel as it generates,
   and auto-explain blunders using the same pipeline
 - Full game review ("Game Report") with accuracy score per player

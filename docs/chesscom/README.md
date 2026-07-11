@@ -1,6 +1,8 @@
 # Chess.com paid features → Claude Code replication map
 
-*Research date: July 2026. Companion docs in this folder detail each area:*
+*Research date: July 2026. Companion docs in this folder detail each area;
+implementation-grade formulas, source-level algorithms and competitor
+analysis live in [docs/research/](../research/README.md).*
 
 - [game-review.md](game-review.md) — Game Review, CAPS2 accuracy, move classifications (Brilliant/Great/…)
 - [lessons-learning.md](lessons-learning.md) — Lessons, guided learning path, Coach explanations, Play Coach
